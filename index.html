@@ -1,0 +1,75 @@
+<head>
+    <script>
+        function onInputElementChange() {
+            var file = document.getElementById("fileForUpload").files[0];
+            if (file) {
+                var reader = new FileReader();
+                reader.readAsText(file, "UTF-8");
+                reader.onload = function (evt) {
+                    parseData(evt.target.result);
+                }
+                reader.onerror = function (evt) {
+                    document.getElementById("message").innerHTML = "error reading file";
+                }
+            }
+        }
+
+        function parseData(fileContent) {
+            var json = JSON.parse(fileContent);
+
+            // check version
+            if (json.version == 1) {
+                document.getElementById("message").innerHTML = "this file is already version 1";
+                return;
+            }
+
+            var pins = json.pins;
+            var newPins = [];
+            pins.forEach(function (pin) {
+                var newPin = {};
+                newPin.package = pin.identity;
+                newPin.repositoryURL = pin.location;
+                var newState = {};
+                newState.branch = null;
+                newState.revision = pin.state.revision;
+                newState.version = pin.state.version;
+                newPin.state = newState;
+                newPins.push(newPin);
+            });
+
+            var newJson = JSON.parse("{}");
+            var newObject = {};
+            newObject.pins = newPins;
+            newJson.object = newObject;
+            newJson.version = 1;
+
+            download("Package.resolved", JSON.stringify(newJson, replacer, 2));
+        }
+
+        function download(filename, text) {
+            var element = document.createElement('a');
+            element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
+            element.setAttribute('download', filename);
+
+            element.style.display = 'none';
+            document.body.appendChild(element);
+
+            element.click();
+
+            document.body.removeChild(element);
+        }
+
+        function replacer(key, value) {
+            // Filtering out properties
+            if (value === null) {
+                return undefined;
+            }
+            return value;
+        }
+    </script>
+</head>
+<body>
+    <h2>Choose Package.resolved file version 2</h2>
+    <input id="fileForUpload" type="file" onchange="onInputElementChange()">
+    <div id="message"></div>
+</body>
